@@ -1,6 +1,6 @@
 {
   "name": "thinking-mcp-tool",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "分解・整理するための思考ツールMCPサーバー",
   "main": "build/index.js",
   "bin": {
