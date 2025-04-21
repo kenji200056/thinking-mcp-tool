@@ -4,7 +4,7 @@ import { z } from "zod";
 // MCPサーバー構築
 const server = new McpServer({
     name: "thinking-mcp",
-    version: "1.0.0",
+    version: "1.0.3",
 });
 // Think Toolの定義
 server.tool("think", "このツールは、考えを整理したり、複雑な問題を分解する際に使用します。外部情報の取得やデータの変更は行わず、受け取った思考内容をログとして記録します。", {
