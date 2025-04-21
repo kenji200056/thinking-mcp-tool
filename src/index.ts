@@ -5,7 +5,7 @@ import { z } from "zod";
 // MCPサーバー構築
 const server = new McpServer({
   name: "thinking-mcp",
-  version: "1.0.0",
+  version: "1.0.3",
 });
 
 // Think Toolの定義
