@@ -1,0 +1,35 @@
+{
+  "name": "thinking-mcp-tool",
+  "version": "1.0.2",
+  "description": "分解・整理するための思考ツールMCPサーバー",
+  "main": "build/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsc && node build/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mcp",
+    "llm",
+    "memory",
+    "thinking",
+    "tool",
+    "thinking-mcp-tool",
+    "考えて",
+    "分析",
+    "thinking-tool",
+    "thinking-mcp-tool"
+  ],
+  "author": "KENJI GUTIERREZ JIMENEZ",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.7.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  }
+}
