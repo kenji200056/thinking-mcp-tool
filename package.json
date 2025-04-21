@@ -4,7 +4,7 @@
   "description": "分解・整理するための思考ツールMCPサーバー",
   "main": "build/index.js",
   "bin": {
-    "thinking-tool": "build/index.js"
+    "thinking-mcp-tool": "build/index.js"
   },
   "type": "module",
   "scripts": {
