@@ -1,3 +1,70 @@
+// import read.Read;  ← この行を削除、またはコメントアウトしてください
+
+public class Main {
+    public static void main(String[] args) {
+        // Readクラスのインスタンスを作成します
+        // 同じディレクトリにあるので、何もしなくてもJavaが見つけてくれます！
+        Read csvReader = new Read();
+
+        // 読み込むCSVファイルのパスもシンプルになります
+        String filePath = "data.csv";
+
+        System.out.println("CSVファイルの内容を表示します。");
+        System.out.println("--------------------");
+
+        csvReader.readCsv(filePath);
+
+        System.out.println("--------------------");
+    }
+}
+
+// package read;  ← この行を削除、またはコメントアウトしてください
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+public class Read {
+    /**
+     * 指定されたパスのCSVファイルを読み込み、内容をコンソールに表示するメソッド
+     * @param filePath 読み込むCSVファイルのパス
+     */
+    public void readCsv(String filePath) {
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            System.err.println("ファイルの読み込み中にエラーが発生しました: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
+// import read.Read;  ← この行を削除、またはコメントアウトしてください
+
+public class Main {
+    public static void main(String[] args) {
+        // Readクラスのインスタンスを作成します
+        // 同じディレクトリにあるので、何もしなくてもJavaが見つけてくれます！
+        Read csvReader = new Read();
+
+        // 読み込むCSVファイルのパスもシンプルになります
+        String filePath = "data.csv";
+
+        System.out.println("CSVファイルの内容を表示します。");
+        System.out.println("--------------------");
+
+        csvReader.readCsv(filePath);
+
+        System.out.println("--------------------");
+    }
+}
+
+
+
+
+
 # MCP Think Tool
 
 これは、Anthropic のエンジニアリングブログで紹介された「Think Tool」をMCPサーバーとして実装したものです。Think Tool は、Claude が複雑な問題を分解し、思考能力を高めるための、シンプルで効果的なプロンプトエンジニアリング手法です。
