@@ -1,65 +1,3 @@
-// import read.Read;  ← この行を削除、またはコメントアウトしてください
-
-public class Main {
-    public static void main(String[] args) {
-        // Readクラスのインスタンスを作成します
-        // 同じディレクトリにあるので、何もしなくてもJavaが見つけてくれます！
-        Read csvReader = new Read();
-
-        // 読み込むCSVファイルのパスもシンプルになります
-        String filePath = "data.csv";
-
-        System.out.println("CSVファイルの内容を表示します。");
-        System.out.println("--------------------");
-
-        csvReader.readCsv(filePath);
-
-        System.out.println("--------------------");
-    }
-}
-
-// package read;  ← この行を削除、またはコメントアウトしてください
-
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-
-public class Read {
-    /**
-     * 指定されたパスのCSVファイルを読み込み、内容をコンソールに表示するメソッド
-     * @param filePath 読み込むCSVファイルのパス
-     */
-    public void readCsv(String filePath) {
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                System.out.println(line);
-            }
-        } catch (IOException e) {
-            System.err.println("ファイルの読み込み中にエラーが発生しました: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-}
-// import read.Read;  ← この行を削除、またはコメントアウトしてください
-
-public class Main {
-    public static void main(String[] args) {
-        // Readクラスのインスタンスを作成します
-        // 同じディレクトリにあるので、何もしなくてもJavaが見つけてくれます！
-        Read csvReader = new Read();
-
-        // 読み込むCSVファイルのパスもシンプルになります
-        String filePath = "data.csv";
-
-        System.out.println("CSVファイルの内容を表示します。");
-        System.out.println("--------------------");
-
-        csvReader.readCsv(filePath);
-
-        System.out.println("--------------------");
-    }
-}
 
 
 
@@ -214,3 +152,126 @@ Think: 5年間の削減総量は、各年の削減量を合計することで計
 ## ライセンス
 
 ISC
+
+```java
+import java.io.*;
+import java.text.NumberFormat;
+import java.util.Locale;
+
+public class Read {
+    public void displayFileContents(String filePath) {
+        final int TW=8, NW=33, MW=10, SW=16;
+        String sep = "|-" + "-".repeat(TW) + "-+" + "-".repeat(NW) + "-+" + "-".repeat(MW) + "-+" + "-".repeat(SW) + "-|";
+        String border = "|=" + "=".repeat(sep.length() - 2) + "=|";
+        String rowFmt = "| %-" + TW + "s | %-" + NW + "s | %-" + MW + "s | %" + SW + "s |\n";
+
+        try (BufferedReader r = new BufferedReader(new FileReader(filePath))) {
+            if (!"ticker,product_name,market,shares_issued".equals(r.readLine())) {
+                System.err.println("エラー: CSVファイルのヘッダーが仕様と異なります。");
+                return;
+            }
+            System.out.println("銘柄マスタを表示します。");
+            System.out.println(border);
+            System.out.printf("| %-" + TW + "s | %-" + NW + "s | %-" + MW + "s | %-" + SW + "s |\n", "Ticker", "Product Name", "Market", "Shares Issued");
+            System.out.println(sep);
+
+            String line;
+            while ((line = r.readLine()) != null) {
+                String[] p = line.split(",", -1);
+                if (p.length != 4) { System.err.println("エラー: CSVの列数が4つではありません。"); return; }
+                
+                String market;
+                switch (p[2]) {
+                    case "P": market = "Prime"; break;
+                    case "S": market = "Standard"; break;
+                    case "G": market = "Growth"; break;
+                    default: System.err.println("エラー: 不明な市場コードです: " + p[2]); return;
+                }
+                String name = p[1].trim();
+                if (name.length() > NW) name = name.substring(0, NW - 3) + "...";
+                
+                try {
+                    String shares = NumberFormat.getNumberInstance(Locale.US).format(Long.parseLong(p[3]));
+                    System.out.printf(rowFmt, p[0], name, market, shares);
+                } catch (NumberFormatException e) {
+                    System.err.println("エラー: 発行済み株式数が数値ではありません: " + p[3]);
+                    return;
+                }
+            }
+            System.out.println(border);
+        } catch (IOException e) {
+            System.err.println("エラー: ファイルが見つからないか、読み込み中にエラーが発生しました。");
+        }
+    }
+}
+
+```
+```java
+import java.io.*;
+import java.util.*;
+import java.util.regex.Pattern;
+
+public class Write {
+    public void addNewStock(String filePath) {
+        Set<String> tickers = new HashSet<>();
+        try (Scanner fileScanner = new Scanner(new File(filePath))) {
+            if (fileScanner.hasNextLine()) fileScanner.nextLine(); // Skip header
+            while (fileScanner.hasNextLine()) {
+                String[] parts = fileScanner.nextLine().split(",", -1);
+                if (parts.length > 0) tickers.add(parts[0]);
+            }
+        } catch (FileNotFoundException e) {
+            // ファイルが存在しない場合は、このまま新規作成されるので問題なし
+        }
+
+        Scanner in = new Scanner(System.in);
+        String t, n, m;
+        long s;
+
+        while (true) {
+            System.out.print("銘柄コード> ");
+            String i = in.nextLine().toUpperCase();
+            if (Pattern.matches("[0-9][A-Z0-9][0-9][A-Z0-9]", i) && !"BEIOQVZ".contains(""+i.charAt(1)) && !"BEIOQVZ".contains(""+i.charAt(3)) && !tickers.contains(i)) {
+                t = i; break;
+            }
+            System.out.println("エラー: 銘柄コードの形式が正しくないか、既に使用されています。");
+        }
+        while (true) {
+            System.out.print("銘柄名> ");
+            n = in.nextLine().trim();
+            if (!n.isEmpty()) break;
+            System.out.println("エラー: 銘柄名は空にできません。");
+        }
+        while (true) {
+            System.out.print("上場市場> ");
+            String i = in.nextLine().toLowerCase();
+            if (i.equals("prime") || i.equals("standard") || i.equals("growth")) {
+                m = String.valueOf(i.charAt(0)).toUpperCase(); break;
+            }
+            System.out.println("エラー: Prime, Standard, Growthのいずれかを入力してください。");
+        }
+        while (true) {
+            System.out.print("発行済み株式数> ");
+            try {
+                s = Long.parseLong(in.nextLine());
+                if (s > 0 && s < 1000000000000L) break;
+            } catch (NumberFormatException e) { /* エラーメッセージへ続く */ }
+            System.out.println("エラー: 1以上の正しい数値を入力してください。");
+        }
+
+        try (PrintWriter w = new PrintWriter(new FileWriter(filePath, true))) {
+            w.println(t + "," + n + "," + m + "," + s);
+            System.out.println(n + " を新規銘柄として登録しました。");
+        } catch (IOException e) {
+            System.err.println("エラー: ファイルへの書き込みに失敗しました。");
+        }
+    }
+}
+
+
+
+
+
+
+```
+
