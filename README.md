@@ -28,20 +28,399 @@ Anthropic によれば、これは「プロンプトエンジニアリングの�
 ツール定義：
 
 ```json
-{
-  "name": "think",
-  "description": "Use the tool to think about something. It will not obtain new information or change the database, but just append the thought to the log. Use it when complex reasoning or some cache memory is needed.",
-  "input_schema": {
-    "type": "object",
-    "properties": {
-      "thought": {
-        "type": "string",
-        "description": "A thought to think about."
-      }
-    },
-    "required": ["thought"]
-  }
+メイン
+import java.io.IOException;
+import java.util.Scanner;
+
+public class App {
+    private final Scanner menuScanner = new Scanner(System.in);
+
+    public void run() {
+        StockCsvReader reader = new StockCsvReader();
+        Displayer displayer = new Displayer();
+        UserInputHandler inputHandler = new UserInputHandler();
+        CsvWriter writer = new CsvWriter();
+        AppLogic appLogic = new AppLogic(reader, displayer, inputHandler, writer);
+
+        System.out.println("株式取引管理システムを開始します。");
+        while (true) {
+            System.out.println("\n------------------------------------");
+            System.out.println("操作するメニューを選んでください。");
+            System.out.println("  A: 銘柄マスタ一覧表示");
+            System.out.println("  B: 銘柄マスタ新規登録");
+            System.out.println("  Q: アプリケーションを終了する");
+            System.out.print("入力してください > ");
+            String choice = menuScanner.nextLine().toUpperCase();
+
+            try {
+                switch (choice) {
+                    case "A":
+                        appLogic.processListStocks();
+                        break;
+                    case "B":
+                        appLogic.processAddNewStock();
+                        break;
+                    case "Q":
+                        System.out.println("アプリケーションを終了します。");
+                        return;
+                    default:
+                        System.err.println("「" + choice + "」に対応するメニューは存在しません。");
+                        break;
+                }
+            } catch (IOException e) {
+                System.err.println("エラー: ファイルの読み書きに失敗しました。(" + e.getMessage() + ")");
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        App app = new App();
+        app.run();
+    }
 }
+表示
+import java.util.List;
+
+public class Displayer {
+
+    public void display(List<Stock> stocks) {
+        if (stocks.isEmpty()) {
+            System.out.println("銘柄マスタにデータがありません。");
+            return;
+        }
+        System.out.println("\n=== 銘柄マスタ一覧 ===");
+        String border = "+--------+------------------------------------------+----------+-----------------+";
+        String header = "| Ticker | Product Name                             | Market   | Issued Number   |";
+        System.out.println(border);
+        System.out.println(header);
+        System.out.println(border);
+
+        for (Stock stock : stocks) {
+            String name = stock.getName();
+            if (name.length() > 40) {
+                name = name.substring(0, 37) + "...";
+            }
+            System.out.printf("| %-6s | %-40s | %-8s | %,15d |\n",
+                    stock.getCode(),
+                    name,
+                    stock.getMarket().getDisplayName(),
+                    stock.getNumberOfShares());
+        }
+        System.out.println(border);
+    }
+}
+書き込み
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+
+public class CsvWriter {
+
+    public void write(String filePath, Stock stock) throws IOException {
+        // Stockオブジェクトから各値を取得してCSV行を作成
+        String line = String.join(",",
+                stock.getCode(),
+                stock.getName().trim(),
+                stock.getMarket().getCode(),
+                String.valueOf(stock.getNumberOfShares())
+        );
+
+        // ファイルに追記
+        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(filePath), StandardCharsets.UTF_8,
+                StandardOpenOption.APPEND, StandardOpenOption.CREATE)) {
+            // ファイルが空か、最終行が改行でない場合に改行を入れる
+            if (Files.size(Paths.get(filePath)) > 0) {
+                writer.newLine();
+            }
+            writer.write(line);
+        }
+    }
+}
+
+書き込み読込制御
+
+import java.io.IOException;
+import java.util.List;
+
+public class AppLogic {
+    private final StockCsvReader reader;
+    private final Displayer displayer;
+    private final UserInputHandler inputHandler;
+    private final CsvWriter writer;
+    private static final String FILE_PATH = "stock_master.csv";
+
+    public AppLogic(StockCsvReader reader, Displayer displayer, UserInputHandler inputHandler, CsvWriter writer) {
+        this.reader = reader;
+        this.displayer = displayer;
+        this.inputHandler = inputHandler;
+        this.writer = writer;
+    }
+
+    // 一覧表示の処理
+    public void processListStocks() throws IOException {
+        List<Stock> stocks = reader.readAll(FILE_PATH);
+        displayer.display(stocks);
+    }
+
+    // 新規登録の処理
+    public void processAddNewStock() throws IOException {
+        List<String> existingCodes = reader.readAllTickerCodes(FILE_PATH);
+        Stock newStock = inputHandler.promptNewStock(existingCodes);
+        if (newStock != null) {
+            writer.write(FILE_PATH, newStock);
+            System.out.println("\n銘柄「" + newStock.getName().trim() + "」を新規登録しました。");
+        }
+    }
+}
+イーナム
+
+
+import java.util.Arrays;
+
+public enum Market {
+    PRIME("P", "Prime"),
+    STANDARD("S", "Standard"),
+    GROWTH("G", "Growth");
+
+    private final String code;
+    private final String displayName;
+
+    Market(String code, String displayName) {
+        this.code = code;
+        this.displayName = displayName;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public static Market fromCode(String code) {
+        return Arrays.stream(values())
+                .filter(m -> m.code.equalsIgnoreCase(code))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public static Market fromInitial(String initial) {
+        if (initial == null || initial.isEmpty()) {
+            return null;
+        }
+        char firstChar = initial.toUpperCase().charAt(0);
+        switch (firstChar) {
+            case 'P': return PRIME;
+            case 'S': return STANDARD;
+            case 'G': return GROWTH;
+            default: return null;
+        }
+    }
+}
+
+ストック
+public class Stock {
+    private String code;
+    private String name;
+    private Market market;
+    private long numberOfShares;
+
+    public Stock(String code, String name, Market market, long numberOfShares) {
+        this.code = code;
+        this.name = name;
+        this.market = market;
+        this.numberOfShares = numberOfShares;
+    }
+
+    // Getters
+    public String getCode() { return code; }
+    public String getName() { return name; }
+    public Market getMarket() { return market; }
+    public long getNumberOfShares() { return numberOfShares; }
+}
+
+CSV読込
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class StockCsvReader {
+
+    public List<Stock> readAll(String filePath) throws IOException {
+        List<Stock> stocks = new ArrayList<>();
+        // ファイルが存在しない場合は空のリストを返す
+        if (!Files.exists(Paths.get(filePath))) {
+            return stocks;
+        }
+
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(filePath), StandardCharsets.UTF_8)) {
+            // ヘッダー行を読み飛ばし、その後の行をStockオブジェクトに変換
+            stocks = reader.lines().skip(1)
+                    .map(line -> line.split(","))
+                    .filter(data -> data.length == 4)
+                    .map(data -> {
+                        try {
+                            String code = data[0];
+                            String name = data[1];
+                            Market market = Market.fromCode(data[2]);
+                            long numberOfShares = Long.parseLong(data[3]);
+                            // マーケットコードが不正な場合はnullを返す
+                            if (market == null) {
+                                System.err.println("WARN: 不正な市場コードを持つ行をスキップ: " + String.join(",", data));
+                                return null;
+                            }
+                            return new Stock(code, name, market, numberOfShares);
+                        } catch (NumberFormatException e) {
+                            System.err.println("WARN: 数値変換に失敗した行をスキップ: " + String.join(",", data));
+                            return null;
+                        }
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .collect(Collectors.toList());
+        }
+        return stocks;
+    }
+
+    // 銘柄コードだけを読み込んでリストで返す
+    public List<String> readAllTickerCodes(String filePath) throws IOException {
+        List<String> codes = new ArrayList<>();
+        if (!Files.exists(Paths.get(filePath))) {
+            return codes;
+        }
+
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(filePath), StandardCharsets.UTF_8)) {
+            codes = reader.lines().skip(1)
+                    .map(line -> line.split(",")[0])
+                    .collect(Collectors.toList());
+        }
+        return codes;
+    }
+}
+
+入力
+
+import java.util.List;
+import java.util.Scanner;
+
+public class UserInputHandler {
+    private final Scanner scanner = new Scanner(System.in);
+
+    // ユーザーに新しい銘柄情報の入力を促す
+    public Stock promptNewStock(List<String> existingCodes) {
+        System.out.println("\n--- 銘柄マスタ新規登録 ---");
+
+        String name = promptForName();
+        String code = promptForCode(existingCodes);
+        if (code == null) { // 重複コードの場合はnullが返る
+            return null;
+        }
+
+        Market market = promptForMarket();
+        long numberOfShares = promptForNumberOfShares();
+
+        return new Stock(code, name, market, numberOfShares);
+    }
+
+    // 銘柄名の入力
+    private String promptForName() {
+        while (true) {
+            System.out.print("銘柄名を入力してください: ");
+            String name = scanner.nextLine().trim();
+            if (Validator.isNameValid(name)) {
+                return name;
+            }
+            System.err.println("エラー: 銘柄名には英数字、スペース、括弧()のみ使用できます。再入力してください。");
+        }
+    }
+
+    // 銘柄コードの入力
+    private String promptForCode(List<String> existingCodes) {
+        while (true) {
+            System.out.print("銘柄コード (数字3桁 + 英数字1桁) を入力してください: ");
+            String code = scanner.nextLine().toUpperCase();
+
+            if (!Validator.isCodeFormatValid(code)) {
+                System.err.println("エラー: 銘柄コードは数字3桁と英数字1桁で構成してください。例: 101A");
+                continue; // 入力形式が不正な場合は再入力
+            }
+
+            if (existingCodes.contains(code)) {
+                System.err.println("エラー: 銘柄コード " + code + " は既に存在します。登録処理を中断します。");
+                return null; // 重複している場合はnullを返して中断
+            }
+            return code; // 正しい形式で重複がない場合
+        }
+    }
+
+    // 上場市場の入力
+    private Market promptForMarket() {
+        while (true) {
+            System.out.print("上場市場 (P: Prime, S: Standard, G: Growth) を入力してください: ");
+            String input = scanner.nextLine();
+            Market market = Market.fromInitial(input);
+            if (market != null) {
+                return market;
+            }
+            System.err.println("エラー: P, S, G のいずれかを入力してください。");
+        }
+    }
+
+    // 発行済み株式数の入力
+    private long promptForNumberOfShares() {
+        while (true) {
+            System.out.print("発行済み株式数を入力してください: ");
+            String input = scanner.nextLine();
+            try {
+                long shares = Long.parseLong(input);
+                if (Validator.isNumberOfSharesValid(shares)) {
+                    return shares;
+                }
+                System.err.println("エラー: 発行済み株式数は1から999,999,999,999の間で入力してください。");
+            } catch (NumberFormatException e) {
+                System.err.println("エラー: 有効な数値を入力してください。");
+            }
+        }
+    }
+}
+
+チェッカー
+import java.util.regex.Pattern;
+
+public class Validator {
+
+    // 銘柄名: 英数字、スペース、括弧 () のみを許可
+    private static final Pattern NAME_PATTERN = Pattern.compile("^[a-zA-Z0-9 .()]+$");
+
+    // 銘柄コード: 先頭3桁が数字、4桁目が英数字
+    private static final Pattern CODE_PATTERN = Pattern.compile("^[0-9]{3}[a-zA-Z0-9]$");
+
+    // 発行済み株式数: 1 から 999,999,999,999 まで
+    private static final long MIN_SHARES = 1L;
+    private static final long MAX_SHARES = 999_999_999_999L;
+
+    public static boolean isNameValid(String name) {
+        return name != null && !name.trim().isEmpty() && NAME_PATTERN.matcher(name).matches();
+    }
+
+    public static boolean isCodeFormatValid(String code) {
+        return code != null && CODE_PATTERN.matcher(code).matches();
+    }
+
+    public static boolean isNumberOfSharesValid(long numberOfShares) {
+        return numberOfShares >= MIN_SHARES && numberOfShares <= MAX_SHARES;
+    }
+}
+
+
 ```
 
 ## 使い方
