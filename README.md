@@ -134,59 +134,97 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
- * CSVファイルを読み込み、1列目の日時を基準に降順で並べ替えて標準出力するクラス。
+ * CSVファイルを読み込み、指定されたクラスにマッピングして表示する。
+ * (inputDateは表示しないバージョン)
  */
 public class CsvSorter {
 
+    private static final DateTimeFormatter CSV_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     public static void main(String[] args) {
-        // 読み込むCSVファイルのパスを指定
+        // このmainメソッドの内容は一切変更ありません
         String csvFilePath = "sample.csv";
 
         try {
-            // 1. CSVファイルを読み込み、各行をリストに格納
-            List<String[]> data = new ArrayList<>();
+            List<Side> records = new ArrayList<>();
             try (BufferedReader br = Files.newBufferedReader(Paths.get(csvFilePath))) {
+                br.readLine(); 
+
                 String line;
                 while ((line = br.readLine()) != null) {
-                    // 行をカンマで分割して配列としてリストに追加
-                    data.add(line.split(","));
+                    String[] row = line.split(",");
+                    if (row.length != 6) {
+                        System.err.println("警告: スキップされた不正な列数を持つ行 -> " + line);
+                        continue;
+                    }
+
+                    try {
+                        LocalDateTime tradeDate = LocalDateTime.parse(row[0], CSV_DATE_TIME_FORMATTER);
+                        String tick = row[1];
+                        String side = row[2];
+                        int quantity = Integer.parseInt(row[3]);
+                        double issuedPrice = Double.parseDouble(row[4]);
+                        // inputDateはCSVから読み込み、オブジェクトには保持されます
+                        LocalDateTime inputDate = LocalDateTime.parse(row[5], CSV_DATE_TIME_FORMATTER);
+
+                        records.add(new Side(tradeDate, tick, side, quantity, issuedPrice, inputDate));
+
+                    } catch (Exception e) {
+                        System.err.println("警告: スキップされたデータ形式が不正な行 -> " + line);
+                    }
                 }
             }
 
-            // 2. 日時フォーマットを定義
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            records.sort(Comparator.comparing(Side::getTradeDate).reversed());
 
-            // 3. 1列目の日時を基準にリストを降順ソート
-            data.sort((row1, row2) -> {
-                // 各行の1列目（インデックス0）から日時の文字列を取得
-                String timestampStr1 = row1[0];
-                String timestampStr2 = row2[0];
-
-                // 文字列をLocalDateTimeオブジェクトに変換
-                LocalDateTime dateTime1 = LocalDateTime.parse(timestampStr1, formatter);
-                LocalDateTime dateTime2 = LocalDateTime.parse(timestampStr2, formatter);
-
-                // 日時を比較して降順にする (dateTime2を先に指定)
-                return dateTime2.compareTo(dateTime1);
-            });
-
-            // 4. ソート後のデータを表示
-            System.out.println("--- ソート後のCSVデータ (降順) ---");
-            for (String[] row : data) {
-                // 配列をカンマで連結して1行の文字列として出力
-                System.out.println(String.join(",", row));
-            }
+            // 変更された出力メソッドを呼び出す
+            printFormattedTable(records);
 
         } catch (IOException e) {
             System.err.println("ファイルの読み込みに失敗しました: " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("処理中にエラーが発生しました: " + e.getMessage());
+            System.err.println("処理中に予期せぬエラーが発生しました: " + e.getMessage());
+            e.printStackTrace();
         }
     }
+    
+    /**
+     * ソート済みのデータリストを整形してテーブル形式でコンソールに出力する。
+     * (inputDate列を表示しないように修正)
+     */
+    private static void printFormattedTable(List<Side> data) {
+        // ▼▼ 変更点① ▼▼ フォーマット定義からinputDateの指定を削除
+        String headerFormat = "| %-10s | %-8s | %-6s | %-6s | %,10s | %,13s |%n";
+        String dataFormat   = "| %-10s | %-8s | %-6s | %-6s | %,10d | %,13.2f |%n";
+        String border       = "+------------+----------+--------+--------+------------+---------------+";
+
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+
+        System.out.println("======================================================================");
+        // ▼▼ 変更点② ▼▼ ヘッダーの引数から "inputDate" を削除
+        System.out.printf(headerFormat, "tradeDate", "time", "tick", "side", "quantity", "issuedPrice");
+        System.out.println(border);
+
+        for (Side record : data) {
+            // ▼▼ 変更点③ ▼▼ データ表示の引数から record.getInputDate() を削除
+            System.out.printf(dataFormat,
+                    record.getTradeDate().format(dateFormatter),
+                    record.getTradeDate().format(timeFormatter),
+                    record.getTick(),
+                    record.getSide(),
+                    record.getQuantity(),
+                    record.getIssuedPrice()
+            );
+        }
+        System.out.println("======================================================================");
+    }
 }
+
 ーーーー
 try {
             // 文字列の形式が yyyy/MM/dd ... であることを前提とする
