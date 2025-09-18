@@ -243,4 +243,41 @@ try {
             return false;
         }
 
+try {
+            // 文字列から年・月・日を抽出
+            int year = Integer.parseInt(dateTimeStr.substring(0, 4));
+            int month = Integer.parseInt(dateTimeStr.substring(5, 7));
+            int day = Integer.parseInt(dateTimeStr.substring(8, 10));
+
+            // 月が2月、日が29日の場合のみ、閏年チェックを行う
+            if (month == 2 && day == 29) {
+                // 閏年かどうかを判定
+                boolean isLeap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+                
+                // もし閏年で「ない」なら、存在するはずのない日付なので false
+                if (!isLeap) {
+                    return false;
+                }
+            }
+        } catch (NumberFormatException | IndexOutOfBoundsException e) {
+            // 年月日の抽出に失敗した場合（形式が不正）
+            return false;
+        }
+        try {
+            // "uuuu"は西暦年を表し、"yyyy"より厳密です。どちらでも多くの場合問題ありません。
+            // ResolverStyle.STRICT で、カレンダーに存在しない日付をエラーにします。
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm")
+                                                            .withResolverStyle(ResolverStyle.STRICT);
+            
+            // 解析を試みる。失敗すると DateTimeParseException が発生する。
+            LocalDateTime.parse(dateTimeStr, formatter);
+            
+            return true; // 解析成功
+            
+        } catch (DateTimeParseException e) {
+            return false; // 解析失敗 (形式が違う or 存在しない日時)
+        }
+
+
+
 ```
